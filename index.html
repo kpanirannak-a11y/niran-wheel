@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIRAN WHEEL</title>
+<style>
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    padding: 15px;
+    background: #080d18;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+h1 {
+    color: #00c8ff;
+    text-shadow: 0 0 15px #00c8ff;
+    letter-spacing: 3px;
+}
+.container {
+    max-width: 500px;
+    margin: auto;
+}
+.wheel-box {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    margin: 25px auto;
+}
+canvas {
+    width: 100%;
+    height: auto;
+    border-radius: 50%;
+    border: 4px solid #00c8ff;
+    box-shadow: 0 0 25px #007bff;
+}
+.pointer {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 30px solid #00e5ff;
+    filter: drop-shadow(0 0 5px #00c8ff);
+}
+input, textarea {
+    width: 100%;
+    padding: 13px;
+    margin: 7px 0;
+    background: #111c30;
+    color: white;
+    border: 1px solid #008cff;
+    border-radius: 8px;
+    font-size: 16px;
+}
+button {
+    padding: 12px 18px;
+    margin: 5px;
+    border: none;
+    border-radius: 8px;
+    background: #008cff;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+button:active {
+    transform: scale(.96);
+}
+.spin-btn {
+    width: 75%;
+    padding: 17px;
+    font-size: 21px;
+    background: linear-gradient(90deg,#007bff,#00d9ff);
+    box-shadow: 0 0 15px #008cff;
+}
+.reset-btn {
+    background: #26354d;
+}
+.result {
+    margin: 20px 0;
+    padding: 18px;
+    background: #111c30;
+    border: 1px solid #00c8ff;
+    border-radius: 12px;
+    font-size: 20px;
+    min-height: 60px;
+    color: #00e5ff;
+    overflow-wrap: anywhere;
+}
+.info {
+    color: #9cb6d3;
+    font-size: 13px;
+}
+.list {
+    text-align: left;
+    background: #111c30;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+.item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #26354d;
+    padding: 8px 2px;
+    gap: 8px;
+    overflow-wrap: anywhere;
+}
+.item button {
+    background: #e53950;
+    padding: 6px 10px;
+    flex-shrink: 0;
+}
+.priority {
+    color: #ffcc00;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>NIRAN WHEEL</h1>
+<p class="info">NEON BLUE RANDOM WHEEL</p>
+<div class="wheel-box">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="700" height="700"></canvas>
+</div>
+<div class="result" id="result">
+    ผลลัพธ์จะแสดงที่นี่
+</div>
+<button class="spin-btn" id="spinBtn" onclick="spinWheel()">
+    🎡 หมุนวงล้อ
+</button>
+<h3>เพิ่มชื่อหรือข้อความ</h3>
+<textarea id="entry" rows="3"
+placeholder="พิมพ์ชื่อหรือข้อความ&#10;หนึ่งบรรทัดต่อหนึ่งช่อง"></textarea>
+
++ เพิ่มช่อง
+รีเซ็ต
+
+<p class="info">
+ใส่เครื่องหมาย . หน้าข้อความ เพื่อกำหนด Priority
+</p>
+<p id="count">จำนวนช่อง: 0</p>
+<p id="priorityCount" class="priority">Priority: 0</p>
+<div class="list" id="list"></div>
+</div>
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+let items = [];
+let rotation = 0;
+let spinning = false;
+const colors = [
+    "#007bff",
+    "#004c99",
+    "#00a6cc",
+    "#142d55",
+    "#0066cc",
+    "#003366",
+    "#008cba",
+    "#152d48"
+];
+function addItems() {
+    if (spinning) return;
+    const input = document.getElementById("entry").value;
+    const newItems = input
+        .split("\n")
+        .map(x => x.trim())
+        .filter(x => x.length > 0);
+    if (newItems.length === 0) return;
+    items.push(...newItems);
+    document.getElementById("entry").value = "";
+    updateWheel();
+}
+function removeItem(index) {
+    if (spinning) return;
+    items.splice(index, 1);
+    updateWheel();
+}
+function resetWheel() {
+    if (spinning) return;
+    items = [];
+    rotation = 0;
+    document.getElementById("result").innerText =
+        "ผลลัพธ์จะแสดงที่นี่";
+    updateWheel();
+}
+function updateWheel() {
+    document.getElementById("count").innerText =
+        "จำนวนช่อง: " + items.length;
+    const priority = items.filter(x => x.startsWith("."));
+    document.getElementById("priorityCount").innerText =
+        "Priority: " + priority.length;
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    items.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "item";
+        const name = document.createElement("span");
+        name.textContent =
+            (item.startsWith(".") ? "⭐ " : "") +
+            item.replace(/^\./, "");
+        if (item.startsWith(".")) {
+            name.style.color = "#ffcc00";
+        }
+        const btn = document.createElement("button");
+        btn.textContent = "ลบ";
+        btn.onclick = () => removeItem(index);
+        div.appendChild(name);
+        div.appendChild(btn);
+        list.appendChild(div);
+    });
+    drawWheel();
+}
+function drawWheel() {
+    const size = canvas.width;
+    const center = size / 2;
+    const radius = center - 8;
+    ctx.clearRect(0, 0, size, size);
+    if (items.length === 0) {
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#111c30";
+        ctx.fill();
+        ctx.fillStyle = "#00c8ff";
+        ctx.font = "bold 35px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("NIRAN", center, center);
+        return;
+    }
+    const step = Math.PI * 2 / items.length;
+    items.forEach((item, i) => {
+        const start = -Math.PI / 2 + i * step + rotation;
+        const end = start + step;
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.strokeStyle = "#00c8ff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(start + step / 2);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        const label = item.replace(/^\./, "");
+        ctx.fillStyle = item.startsWith(".")
+            ? "#ffdf70"
+            : "#ffffff";
+        ctx.font = "bold " +
+            (items.length > 30 ? "13px" :
+            items.length > 15 ? "17px" : "21px") +
+            " Arial";
+        let text = label;
+        if (text.length > 20) {
+            text = text.substring(0, 19) + "...";
+        }
+        ctx.fillText(text, radius - 25, 0);
+        ctx.restore();
+    });
+    ctx.beginPath();
+    ctx.arc(center, center, 35, 0, Math.PI * 2);
+    ctx.fillStyle = "#071323";
+    ctx.fill();
+    ctx.strokeStyle = "#00c8ff";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = "#00c8ff";
+    ctx.font = "bold 15px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("N", center, center);
+}
+function randomIndex(length) {
+    const values = new Uint32Array(1);
+    const limit = Math.floor(4294967296 / length) * length;
+    do {
+        crypto.getRandomValues(values);
+    } while (values[0] >= limit);
+    return values[0] % length;
+}
+function mod(value, divisor) {
+    return ((value % divisor) + divisor) % divisor;
+}
+function spinWheel() {
+    if (spinning || items.length === 0) {
+        if (items.length === 0) {
+            alert("กรุณาเพิ่มชื่อก่อนหมุนวงล้อ");
+        }
+        return;
+    }
+    let candidates = [];
+    // ระบบ Priority
+    const priorityItems = items
+        .map((item, index) => ({
+            item: item,
+            index: index
+        }))
+        .filter(x => x.item.startsWith("."));
+    if (priorityItems.length === 1) {
+        // มีจุดเดียว ล็อกผลลัพธ์นั้น
+        candidates = priorityItems;
+    } else if (priorityItems.length >= 2) {
+        // มีหลายจุด สุ่มเฉพาะรายการที่มีจุด
+        candidates = priorityItems;
+    } else {
+        // ไม่มีจุด สุ่มทุกช่อง
+        candidates = items.map((item, index) => ({
+            item: item,
+            index: index
+        }));
+    }
+    const selected = candidates[
+        randomIndex(candidates.length)
+    ];
+    const targetIndex = selected.index;
+    const step = Math.PI * 2 / items.length;
+    const targetRotation = mod(
+        -(targetIndex + 0.5) * step,
+        Math.PI * 2
+    );
+    const difference = mod(
+        targetRotation - mod(rotation, Math.PI * 2),
+        Math.PI * 2
+    );
+    const startRotation = rotation;
+    const finalRotation =
+        rotation + Math.PI * 2 * 7 + difference;
+    const duration = 5000;
+    const startTime = performance.now();
+    spinning = true;
+    document.getElementById("spinBtn").disabled = true;
+    document.getElementById("spinBtn").style.opacity = ".5";
+    document.getElementById("result").innerText =
+        "กำลังหมุน...";
+    function animate(now) {
+        const progress = Math.min(
+            (now - startTime) / duration,
+            1
+        );
+        // Ease Out
+        const ease = 1 - Math.pow(1 - progress, 5);
+        rotation =
+            startRotation +
+            (finalRotation - startRotation) * ease;
+        drawWheel();
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            rotation = finalRotation;
+            drawWheel();
+            spinning = false;
+            document.getElementById("spinBtn").disabled = false;
+            document.getElementById("spinBtn").style.opacity = "1";
+            document.getElementById("result").innerText =
+                "🏆 ผลลัพธ์: " +
+                selected.item.replace(/^\./, "");
+        }
+    }
+    requestAnimationFrame(animate);
+}
+updateWheel();
+</script>
+</body>
+</html>
